@@ -130,7 +130,7 @@ html = f"""
     <head>
         <style>
             body {{
-                font-size: 3em;
+                font-size: 4em;
             }}
             table, th, td {{
                 font-size: 1em;
