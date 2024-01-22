@@ -1,3 +1,6 @@
+# Need to do before : pip install helloasso_api
+
+
 from helloasso_api import HaApiV5
 from datetime import datetime
 import json
@@ -115,19 +118,18 @@ participants_2 = event_2.participants
 #str_particpants = str(json_participants).replace("Stage d'hiver 2024 U7 à U11", "Stage dhiver 2024 U7 à U11").replace("Personne à prévenir en cas d'urgence", "Personne à prévenir en cas durgence").replace("'",'"').replace("False","'False'")
 #print(str_particpants)
 
-html_days = ""
+html_days = "\n"
 for day in (event_1.all_days + event_2.all_days):
     nb = len([p for p in event_1.participants if day in p.jours]) + len([p for p in event_2.participants if day in p.jours])
     print(f"{day}: {nb}")
-    html_days += f"<li>{day}: {nb}</li>\n"
+    html_days += (" "*4*3) + f"<li>{day}: {nb}</li>\n"
 
 
 html = f"""
 <html>
     <body>
         Inscription aux stages
-        <ul>
-        {html_days}
+        <ul>{html_days}
         </ul>
         dernière mises à jour: {now_string}
     </body>
