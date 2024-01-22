@@ -122,15 +122,31 @@ html_days = "\n"
 for day in (event_1.all_days + event_2.all_days):
     nb = len([p for p in event_1.participants if day in p.jours]) + len([p for p in event_2.participants if day in p.jours])
     print(f"{day}: {nb}")
-    html_days += (" "*4*3) + f"<li>{day}: {nb}</li>\n"
+    html_days += (" "*4*3) + f"<tr><td>{day}</td><td>{nb}</td></tr>\n"
 
 
 html = f"""
 <html>
+    <head>
+        <style>
+            table, th, td {{
+                margin: 1em;
+                border: 1px solid black;
+                border-collapse: collapse;
+            }}
+            td {{
+                padding: 5px;
+                text-align: center;
+            }}
+            tr:nth-child(odd) {{
+                background-color: #a4c2f7;
+            }}
+        </style>
+    </head>
     <body>
         Inscription aux stages
-        <ul>{html_days}
-        </ul>
+        <table>{html_days}
+        </table>
         dernière mises à jour: {now_string}
     </body>
 </html>
