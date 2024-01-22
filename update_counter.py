@@ -129,28 +129,27 @@ html = f"""
 <html>
     <head>
         <style>
-            body {
+            body {{
                 font-size: 3em;
-            }
-            table, th, td {
+            }}
+            table, th, td {{
                 font-size: 1em;
                 margin: 1em;
                 border: 1px solid black;
                 border-collapse: collapse;
-            }
-            td {
+            }}
+            td {{
                 padding: 5px;
                 text-align: center;
-            }
-            tr:nth-child(odd) {
+            }}
+            tr:nth-child(odd) {{
                 background-color: #a4c2f7;
-            }
-            @media (max-width: 600px) {
-                
-                table {
+            }}
+            @media (max-width: 600px) {{
+                table {{
                     width: 90%;  
-                }
-            }
+                }}
+            }}
         </style>
     </head>
     <body>
