@@ -20,7 +20,18 @@ class OrganizationApi(object):
 
 
     def get_event_participants(self, event: str) -> dict:
-        return self._client.call(f"/v5/organizations/{self._slug}/forms/Event/{event}/items?pageIndex=1&pageSize=20&withDetails=true&sortOrder=Desc&sortField=Date").json()
+        page_index = 1
+        page_size = 20
+        
+        json_data = []
+        while True:
+            json = self._client.call(f"/v5/organizations/{self._slug}/forms/Event/{event}/items?pageIndex={page_index}&pageSize={page_size}&withDetails=true&sortOrder=Desc&sortField=Date").json()
+            print(f'Event: {event} = {len(json["data"])} participants')
+            json_data = json_data + json["data"]
+            if (len(json["data"]) < page_size):
+                break
+            page_index += 1
+        return json_data
 
     def get_extract_event_participants(self, event: str, jours) -> dict:
         json_participants = self.get_event_participants(event)
@@ -49,9 +60,9 @@ class Participant:
     def __str__(self):
         return f"{self.nom}, {self.prenom}, {self.categorie}, {self.jours}"
 
-def print_by_day(json_response):
-    print(json_response)
-    data = json_response["data"]
+def print_by_day(json_data):
+    print(json_data)
+    data = json_data
     for d in data:
         print(f"{d['user']['firstName']} | {d['user']['lastName']} | {d['name']} | {d['payer']['email']}")
 
@@ -62,8 +73,8 @@ def print_by_day(json_response):
         jours = []
         Participant(d['user']['lastName'], d['user']['firstName'], d['customFields']['Catégorie'], jours)
 
-def extract_participants(json_response, all_days):
-    data = json_response["data"]
+def extract_participants(json_data, all_days):
+    data = json_data
     participants=[]
     for d in data:
         customFields = d['customFields']
