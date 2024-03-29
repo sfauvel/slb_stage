@@ -38,6 +38,13 @@ class OrganizationApi(object):
         participants = extract_participants(json_participants, jours)
         return Event(event, jours, participants)
 
+    def get_shop_nb_participants(self, shop: str) -> int:
+        page_index = 1
+        page_size = 1
+                
+        json = self._client.call(f"/v5/organizations/{self._slug}/forms/Shop/{shop}/items?pageIndex={page_index}&pageSize={page_size}").json()
+        total = json["pagination"]["totalCount"]
+        return total
 
 def print_response(json_response):
     for k,v in json_response.items():
@@ -118,9 +125,9 @@ orga = OrganizationApi(api, slug)
 #print(json_orga)
 #print_response(json_orga)
 
-event_1 = orga.get_extract_event_participants('stage-d-hiver-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"])
+event_1 = orga.get_extract_event_participants('stage-de-printemps-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"])
 participants_1 = event_1.participants
-event_2 = orga.get_extract_event_participants('stage-d-hiver-2024-u13-a-u20', ["Jeudi", "Vendredi"])
+event_2 = orga.get_extract_event_participants('stage-de-printemps-2024-u13-a-u20', ["Jeudi", "Vendredi"])
 participants_2 = event_2.participants
 
 
@@ -139,12 +146,9 @@ for day in (event_1.all_days + event_2.all_days):
 html = f"""
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{
-                font-size: 4em;
-            }}
             table, th, td {{
-                font-size: 1em;
                 margin: 1em;
                 border: 1px solid black;
                 border-collapse: collapse;
@@ -155,11 +159,6 @@ html = f"""
             }}
             tr:nth-child(odd) {{
                 background-color: #a4c2f7;
-            }}
-            @media (max-width: 600px) {{
-                table {{
-                    width: 90%;  
-                }}
             }}
         </style>
     </head>
@@ -173,4 +172,26 @@ html = f"""
 """
 
 with open("docs/index.html", "w") as html_file:
+    html_file.write(html)
+
+
+shop = "commande-surmaillots"
+nb_ventes = orga.get_shop_nb_participants(shop)
+
+html = f"""
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+        </style>
+    </head>
+    <body>
+        <div>Ventes boutique: {nb_ventes}</div>
+        </br>
+        <div>dernière mises à jour<br>{now_string}</div>
+    </body>
+</html>
+"""
+
+with open("docs/ventes-boutique.html", "w") as html_file:
     html_file.write(html)
