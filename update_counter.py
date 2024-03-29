@@ -124,26 +124,29 @@ def count_participants_by_day(event):
         nb = len([p for p in participants if day in p.jours])
         print(f"{day}: {nb}")
 
+def generate_html(body, style=""):
+    return f"""<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+        {style}
+        </style>
+    </head>
+    <body>
+        {body}
+    </body>
+</html>
+"""
 
 def shop(shop, output_file):
     
     nb_ventes = orga.get_shop_nb_participants(shop)
 
-    html = f"""
-    <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-            </style>
-        </head>
-        <body>
+    html = generate_html(f"""
             <div>Ventes boutique: {nb_ventes}</div>
             </br>
-            <div>dernière mises à jour<br>{now_string}</div>
-        </body>
-    </html>
-    """
-
+            <div>dernière mises à jour<br>{now_string}</div>""")
+    
     with open(output_file, "w") as html_file:
         html_file.write(html)
     
@@ -156,12 +159,12 @@ def stage(stages, output_file):
         print(f"{day}: {nb}")
         html_days += (" "*4*3) + f"<tr><td>{day}</td><td>{nb}</td></tr>\n"
 
-
-    html = f"""
-    <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
+    html = generate_html(f"""
+            Inscription aux stages
+            <table>{html_days}
+            </table>
+            dernière mises à jour<br>{now_string}""",
+            style=f"""
                 table, th, td {{
                     margin: 1em;
                     border: 1px solid black;
@@ -173,17 +176,7 @@ def stage(stages, output_file):
                 }}
                 tr:nth-child(odd) {{
                     background-color: #a4c2f7;
-                }}
-            </style>
-        </head>
-        <body>
-            Inscription aux stages
-            <table>{html_days}
-            </table>
-            dernière mises à jour<br>{now_string}
-        </body>
-    </html>
-    """
+                }}""")
 
     with open(output_file, "w") as html_file:
         html_file.write(html)
@@ -201,9 +194,6 @@ now_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 slug = 'sainte-luce-basket'
 orga = OrganizationApi(api, slug)
-#json_orga = orga.get_by_slug()
-#print(json_orga)
-#print_response(json_orga)
 
 stage([
     ('stage-de-printemps-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"]),
