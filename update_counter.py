@@ -7,42 +7,61 @@ import json
 import os
 
 class OrganizationApi(object):
+    
     def __init__(self, client, slug):
+        self._base_url = "/v5/organizations"
         self._client = client
         self._slug = slug
 
     def get_by_slug(self) -> dict:
-        return self._client.call(f"/v5/organizations/{self._slug}").json()
+        return self._client.call(f"{self._base_url}/{self._slug}").json()
 
 
     def items(self, slug: str) -> dict:
-        return self._client.call(f"/v5/organizations/{self._slug}").json()
+        return self._client.call(f"{self._base_url}/{self._slug}").json()
 
+    def call(self, route, params={}):
+        url_params = "&".join([f"{key}={value}" for (key, value) in params.items()])
+        request = f'{self._base_url}/{self._slug}/{route}/items?{url_params}'
+        print(request)
+        return self._client.call(request).json()
+          
 
-    def get_event_participants(self, event: str) -> dict:
+    def get_all_items_data(self, url: str, params={}) -> dict:
         page_index = 1
         page_size = 20
         
         json_data = []
+        params["pageSize"] = page_size
         while True:
-            json = self._client.call(f"/v5/organizations/{self._slug}/forms/Event/{event}/items?pageIndex={page_index}&pageSize={page_size}&withDetails=true&sortOrder=Desc&sortField=Date").json()
-            print(f'Event: {event} = {len(json["data"])} participants')
+            params["pageIndex"] = page_index
+            json = self.call(url, params)
+            
             json_data = json_data + json["data"]
             if (len(json["data"]) < page_size):
                 break
             page_index += 1
         return json_data
 
+    def get_event_participants(self, event: str) -> dict:
+        params = {
+            "withDetails": "true",
+            "sortOrder": "Desc",
+            "sortField": "Date"
+        }
+        return self.get_all_items_data(f"forms/Event/{event}", params)
+    
     def get_extract_event_participants(self, event: str, jours) -> dict:
         json_participants = self.get_event_participants(event)
         participants = extract_participants(json_participants, jours)
         return Event(event, jours, participants)
 
     def get_shop_nb_participants(self, shop: str) -> int:
-        page_index = 1
-        page_size = 1
-                
-        json = self._client.call(f"/v5/organizations/{self._slug}/forms/Shop/{shop}/items?pageIndex={page_index}&pageSize={page_size}").json()
+        params = {
+            "pageSize": 1,
+            "pageIndex": 1,
+        }
+        json = self.call(f"forms/Shop/{shop}", params)
         total = json["pagination"]["totalCount"]
         return total
 
@@ -106,7 +125,68 @@ def count_participants_by_day(event):
         print(f"{day}: {nb}")
 
 
+def shop(shop, output_file):
+    
+    nb_ventes = orga.get_shop_nb_participants(shop)
 
+    html = f"""
+    <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+            </style>
+        </head>
+        <body>
+            <div>Ventes boutique: {nb_ventes}</div>
+            </br>
+            <div>dernière mises à jour<br>{now_string}</div>
+        </body>
+    </html>
+    """
+
+    with open(output_file, "w") as html_file:
+        html_file.write(html)
+    
+def stage(stages, output_file):
+    events = [orga.get_extract_event_participants(event, days) for (event, days) in stages]
+    
+    html_days = "\n"
+    for day in [day for (event, days) in stages for day in days]:
+        nb = len([p for event in events for p in event.participants if day in p.jours])
+        print(f"{day}: {nb}")
+        html_days += (" "*4*3) + f"<tr><td>{day}</td><td>{nb}</td></tr>\n"
+
+
+    html = f"""
+    <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                table, th, td {{
+                    margin: 1em;
+                    border: 1px solid black;
+                    border-collapse: collapse;
+                }}
+                td {{
+                    padding: 5px;
+                    text-align: center;
+                }}
+                tr:nth-child(odd) {{
+                    background-color: #a4c2f7;
+                }}
+            </style>
+        </head>
+        <body>
+            Inscription aux stages
+            <table>{html_days}
+            </table>
+            dernière mises à jour<br>{now_string}
+        </body>
+    </html>
+    """
+
+    with open(output_file, "w") as html_file:
+        html_file.write(html)
 
 
 api = HaApiV5(
@@ -125,73 +205,9 @@ orga = OrganizationApi(api, slug)
 #print(json_orga)
 #print_response(json_orga)
 
-event_1 = orga.get_extract_event_participants('stage-de-printemps-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"])
-participants_1 = event_1.participants
-event_2 = orga.get_extract_event_participants('stage-de-printemps-2024-u13-a-u20', ["Jeudi", "Vendredi"])
-participants_2 = event_2.participants
+stage([
+    ('stage-de-printemps-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"]),
+    ('stage-de-printemps-2024-u13-a-u20', ["Jeudi", "Vendredi"])
+], "docs/index.html")
 
-
-#print("\n".join([str(participant) for participant in participants_1 + participants_2]))
-#count_participants_by_day(event_1 + event_2)
-#str_particpants = str(json_participants).replace("Stage d'hiver 2024 U7 à U11", "Stage dhiver 2024 U7 à U11").replace("Personne à prévenir en cas d'urgence", "Personne à prévenir en cas durgence").replace("'",'"').replace("False","'False'")
-#print(str_particpants)
-
-html_days = "\n"
-for day in (event_1.all_days + event_2.all_days):
-    nb = len([p for p in event_1.participants if day in p.jours]) + len([p for p in event_2.participants if day in p.jours])
-    print(f"{day}: {nb}")
-    html_days += (" "*4*3) + f"<tr><td>{day}</td><td>{nb}</td></tr>\n"
-
-
-html = f"""
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            table, th, td {{
-                margin: 1em;
-                border: 1px solid black;
-                border-collapse: collapse;
-            }}
-            td {{
-                padding: 5px;
-                text-align: center;
-            }}
-            tr:nth-child(odd) {{
-                background-color: #a4c2f7;
-            }}
-        </style>
-    </head>
-    <body>
-        Inscription aux stages
-        <table>{html_days}
-        </table>
-        dernière mises à jour<br>{now_string}
-    </body>
-</html>
-"""
-
-with open("docs/index.html", "w") as html_file:
-    html_file.write(html)
-
-
-shop = "commande-surmaillots"
-nb_ventes = orga.get_shop_nb_participants(shop)
-
-html = f"""
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-        </style>
-    </head>
-    <body>
-        <div>Ventes boutique: {nb_ventes}</div>
-        </br>
-        <div>dernière mises à jour<br>{now_string}</div>
-    </body>
-</html>
-"""
-
-with open("docs/ventes-boutique.html", "w") as html_file:
-    html_file.write(html)
+shop("commande-surmaillots", "docs/ventes-boutique.html")
