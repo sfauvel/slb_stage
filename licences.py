@@ -22,13 +22,10 @@ def paiements(json_file: str, json_adhesion_file: str):
     
 
 def display_paiement(paiement):
-    if isinstance(paiement.montant_deduit, Montant):
-        texte_mutation= f" + {paiement.montant_deduit.mutation: >2}€" if paiement.montant_deduit.mutation is not None else " +  0€"
-        texte_fraterie= f" + {paiement.montant_deduit.fraterie: >4}€" if paiement.montant_deduit.fraterie is not None else " +    0€"
-        return f"{paiement.categorie:<8} {paiement.montant_deduit.montant: >6}€ + {paiement.montant_deduit.assurance: >5}€{texte_mutation}{texte_fraterie} {paiement.payeur.mail:<30} {paiement.description}"
-    else:
-        return f"{paiement.montant_deduit} {paiement.payeur.mail} {paiement.description}"
-
+    texte_mutation= f" + {paiement.montant_deduit.mutation: >2}€" if paiement.montant_deduit.mutation is not None else " +  0€"
+    texte_fraterie= f" + {paiement.montant_deduit.fraterie: >4}€" if paiement.montant_deduit.fraterie is not None else " +    0€"
+    return f"{paiement.categorie:<8} {paiement.montant_deduit.montant: >6}€ + {paiement.montant_deduit.assurance: >5}€{texte_mutation}{texte_fraterie} {paiement.payeur.mail:<30} {paiement.description}"
+    
 def get_categorie(categories, annee_naissance, annee_reference=2024):
     categorie = annee_reference - int(annee_naissance) + 1
     if categorie >= 21:
@@ -56,20 +53,35 @@ TARIFS = {
 }
 CATEGORIES=TARIFS.keys()
 
+ASSURANCES = [
+    217, 
+    627, 
+    217+36, 
+    627+36
+]
+
 class Adhesion2024_2025(Adhesion):
     def __init__(self, nom, payeur, commande, utilisateur, montant, options, champs_specifiques):
         super().__init__(nom, payeur, commande, utilisateur, montant, options, champs_specifiques)
+        self.erreurs = []
         
         self.date_naissance=next(filter(lambda x: x.nom=="Date de naissance", champs_specifiques)).reponse
         (self.jour, self.mois, self.annee_naissance) = self.date_naissance.split("/")
         
         self.description = f"{self.nom} - {self.utilisateur.nom} {self.utilisateur.prenom} {self.date_naissance}"
-        self.erreurs = []
         
         self.categorie = get_categorie(CATEGORIES, self.annee_naissance)
         
+        self._deduire_montant(options)
+    
+    def _deduire_montant(self, options):
         assurance = sum([o.montant for o in options if o.nom.startswith("Assurance")])
-        self.montant_deduit = Montant.deduire(TARIFS, -7.5, self.categorie, montant, assurance)
+        montant_deduit = Montant.deduire(TARIFS, -7.5, self.categorie, self.montant, assurance)
+        if isinstance(montant_deduit, Montant):
+            self.montant_deduit = montant_deduit
+        else:
+            self.erreurs.append(f"{montant_deduit} {self.payeur.mail} {self.description}")
+        
         
     def new(data):
         adhesion = HelloAssoToModel.new_adhesion(data)
@@ -78,21 +90,29 @@ class Adhesion2024_2025(Adhesion):
 class Paiement2024_2025(Paiement):
     def __init__(self, payeur, date, montant, items, commande):
         super().__init__(payeur, date, montant, items, commande)
+        self.erreurs = []
+        
         self.description = items[0].nom
         self.montant = self.items[0].montant
         
-        self.erreurs = []
         if len(self.items) != 1:
             self.erreurs.append(f"Un seul item attendu, {len(self.items)} présent(s) sur {self.description}")
         
         self._extract_preinscription(self.description)
                 
-        self.categorie = get_categorie(CATEGORIES, self.annee_naissance)
-        self.montant_deduit = Montant.deduire(TARIFS, -15, self.categorie, self.montant)
+        self._deduire_montant()
         
     def is_a(data):
         paiement = HelloAssoToModel.new_paiement(data)
         return paiement.commande.nom == "default"
+        
+    def _deduire_montant(self):
+        self.categorie = get_categorie(CATEGORIES, self.annee_naissance)
+        montant_deduit = Montant.deduire(TARIFS, -15, self.categorie, self.montant)
+        if isinstance(montant_deduit, Montant):
+            self.montant_deduit = montant_deduit
+        else:
+            self.erreurs.append(f"{montant_deduit} {self.payeur.mail} {self.description}")
         
     def _extract_preinscription(self, description):
         # Avec '(.+) (.+)' le prénom ne peut pas contenir d'espace
@@ -123,8 +143,6 @@ class Montant:
         assurance = assurance/100
             
         tarif_mutation = 60
-        is_mutation = False
-        is_fraterie = False
 
         tarifs = [tarif["Sénior"], tarif["Loisir"], tarif["Bénévoles joueurs"], tarif["Bénévoles non joueur"]] if categorie == "Sénior" else [tarif[categorie], tarif["Bénévoles joueurs"]]
         def is_tarif_existant(montant):
@@ -137,15 +155,13 @@ class Montant:
                 (montant, assurance, None, tarif_fraterie)
             elif is_tarif_existant(montant-tarif_mutation-tarif_fraterie):
                 (montant, assurance, tarif_mutation, tarif_fraterie)
-            else:
-                # return f"ERREUR: {categorie} {montant} (au lieu de l'un des tarifs {tarifs}) {mail} {name}"
-                return f"ERREUR: {categorie} {montant} (au lieu de l'un des tarifs {tarifs})"
+            else:             
+                return f"ERREUR: {categorie} {montant} (au lieu de l'un des tarifs {tarifs} ou +{tarif_mutation} ou {tarif_fraterie})"
             
         return Montant(montant, assurance, None, None)
     
     def _deduire_assurance(montant):
-        assurances = [217, 627, 217+36, 627+36]
-        for assurance in assurances:
+        for assurance in ASSURANCES:
             if (montant-assurance) % 100 == 0:
                 montant -= assurance
                 return (montant, assurance)
