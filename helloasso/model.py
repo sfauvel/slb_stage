@@ -89,6 +89,13 @@ class Adhesion:
         self.options = options
         self.champs_specifiques = champs_specifiques
         
+    def tous_les_champs_specifiques(self, champs = None):
+        if len(self.champs_specifiques) == 0:
+            return []
+        
+        return [champ for champ in self.champs_specifiques if champs is None or champ.nom.lower() in champs]
+    
+        
 class Paiement:
     def __init__(self, payeur, date, montant, items, commande):
         self.payeur = payeur
