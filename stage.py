@@ -70,7 +70,7 @@ def chargement_donnees(event):
     with open(f"data/{event}.json", "w") as outfile:
         outfile.write(json.dumps(json_participants, indent=4))
         
-def synthese_stages(stages, output_file, now_string):
+def synthese_stages(nom, stages, output_file, now_string):
    
     events = [ Evenement.charger(event, days) for (event, days) in stages]
 
@@ -85,7 +85,7 @@ def synthese_stages(stages, output_file, now_string):
         effectif_par_jour.append((day, nb))
         print(f"{day}: {nb}")
         
-    generer_rapport(effectif_par_jour, output_file, now_string)
+    generer_rapport(nom, effectif_par_jour, output_file, now_string)
 
         
 def generer_html(body, style=""):
@@ -102,10 +102,10 @@ def generer_html(body, style=""):
 </html>
 """
 
-def generer_rapport(effectif_par_jour, output_file, now_string):
+def generer_rapport(nom, effectif_par_jour, output_file, now_string):
     html_days = ("\n"+(" "*4*3)).join([f"<tr><td>{day}</td><td>{nb}</td></tr>" for (day, nb) in effectif_par_jour])
     html = generer_html(f"""
-            Inscription aux stages
+            Inscription aux stages {nom}
             <table>
             {html_days}
             </table>
