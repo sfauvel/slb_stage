@@ -1,8 +1,8 @@
 pushd "${BASH_SOURCE%/*}"
 
-. ../helloasso/work/secrets.sh
+. ./helloasso/work/secrets.sh
 
-python3 stage.py --refresh
+python3 update_counter.py --refresh
 
 git add docs/index.html
 git add docs/ventes-boutique.html
