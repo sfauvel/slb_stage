@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 from stage import chargement_donnees, synthese_stages
+from boutique import mise_a_jour_boutique
 
 def mise_a_jour_stages(nom, stages, refresh = False):
     if refresh:
@@ -17,8 +18,8 @@ def mise_a_jour_stages(nom, stages, refresh = False):
     
 
 stages = [
-   ('stage-d-ete-2024-u9-a-u11', ["Lundi", "Mardi", "Mercredi"]),
-   ('stage-d-ete-2024-u13-a-u21', ["Jeudi", "Vendredi"])
+   ('stage-d-automne-2024-u7-a-u11', ["Lundi", "Mardi", "Mercredi"]),
+   ('stage-d-automne-2024-u13-a-u21', ["Jeudi", "Vendredi"])
 ]
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -29,4 +30,7 @@ args = parser.parse_args()
 
 refresh=args.refresh
 
-mise_a_jour_stages("Été 2024", stages, refresh)
+mise_a_jour_stages("Automne 2024", stages, refresh)
+
+mise_a_jour_boutique("commande-surmaillots-10-2024", refresh)
+#mise_a_jour_boutique("commande-surmaillots", refresh)

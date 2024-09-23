@@ -77,17 +77,19 @@ def synthese_stages(nom, stages, output_file, now_string):
     all_days = [day.lower() for (_, days) in stages for day in days]
     
     effectif_par_jour = []
+    liste_stages = ", ".join([stage[0] for stage in stages])
+    print(f"Stages ({liste_stages})")
+        
     for day in all_days:
         nb = sum([effectif 
                   for event in events 
                   for (jour, effectif) in event.effectif_par_jour().items() 
                   if jour.lower() == day.lower()])
         effectif_par_jour.append((day, nb))
-        print(f"{day}: {nb}")
+        print(f"- {day}: {nb}")
         
     generer_rapport(nom, effectif_par_jour, output_file, now_string)
 
-        
 def generer_html(body, style=""):
     return f"""<html>
     <head>
