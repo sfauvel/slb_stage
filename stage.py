@@ -107,7 +107,7 @@ def generer_html(body, style=""):
 def generer_rapport(nom, effectif_par_jour, output_file, now_string):
     html_days = ("\n"+(" "*4*3)).join([f"<tr><td>{day}</td><td>{nb}</td></tr>" for (day, nb) in effectif_par_jour])
     html = generer_html(f"""
-            Inscription aux stages {nom}
+            <h3>Inscription aux stages {nom}</h3>
             <table>
             {html_days}
             </table>

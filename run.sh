@@ -1,6 +1,6 @@
 pushd "${BASH_SOURCE%/*}"
 
-. ./helloasso/work/secrets.sh
+. ../helloasso/work/secrets.sh
 
 python3 update_counter.py --refresh
 

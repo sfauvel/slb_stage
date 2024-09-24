@@ -52,7 +52,8 @@ def generate_html(body, style=""):
 def generer_rapport(shop, nb_ventes, output_file, now_string):
     print(f"{shop}: {nb_ventes}")
     html = generate_html(f"""
-            <div>Ventes boutique: {nb_ventes}</div>
+            <h3>{shop}</h3>
+            <div>Ventes: {nb_ventes}</div>
             </br>
             <div>dernière mises à jour<br>{now_string}</div>""")
     
