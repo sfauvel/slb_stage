@@ -5,16 +5,22 @@ import sys
 sys.path.insert(0, '../helloasso')
 from model import HelloAssoToModel
 
+
+def chargement_donnees_boutique(shop):    
+    from hello_asso import orga
+    
+    json_boutique = orga.get_shop_participants(shop)
+    #print(json_boutique)
+    
+    with open(f"data/{shop}.json", "w") as outfile:
+        outfile.write(json.dumps(json_boutique, indent=4))
+
 def mise_a_jour_boutique(shop, refresh = False):   
 
     if refresh:
-        from hello_asso import orga
-        print(f"Refresh {shop}")
+        print(f"Chargement {shop}")
         now_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        json_boutique = orga.get_shop_participants(shop)
-        print(json_boutique)
-        with open(f"data/{shop}.json", "w") as outfile:
-            outfile.write(json.dumps(json_boutique, indent=4))
+        chargement_donnees_boutique(shop)
     else:
         now_string = "Pas de mise à jour"
 
