@@ -87,9 +87,9 @@ class SyntheseHelloAsso(object):
         from hello_asso import OrganizationApi
         data_getter = OrganizationApi.get_event_participants
 
-        from hello_asso import orga
+        from hello_asso import get_organization
 
-        json_data = fonction_recuperation(orga, self.nom)
+        json_data = fonction_recuperation(get_organization(), self.nom)
         #print(json_data)
 
         with open(f"data/{self.nom}.json", "w") as outfile:
