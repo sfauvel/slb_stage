@@ -5,64 +5,51 @@ import sys
 sys.path.insert(0, '../helloasso')
 from model import HelloAssoToModel
 
+from commun import DocumentHtml, JsonTools, SyntheseHelloAsso
 
-def chargement_donnees_boutique(shop):    
-    from hello_asso import orga
+class DocumentBoutique(DocumentHtml):
+    def __init__(self) -> None:
+        super().__init__()
+       
     
-    json_boutique = orga.get_shop_participants(shop)
-    #print(json_boutique)
+    def generer_rapport(self, shop, nb_ventes, now_string):
+        print(f"{shop}: {nb_ventes}")
+        html = DocumentHtml().generer_html(f"""
+                <h3>{shop}</h3>
+                <div>Ventes: {nb_ventes}</div>
+                </br>
+                <div>dernière mises à jour<br>{now_string}</div>""")
+        return html
     
-    with open(f"data/{shop}.json", "w") as outfile:
-        outfile.write(json.dumps(json_boutique, indent=4))
 
-def mise_a_jour_boutique(shop, refresh = False):   
-
-    if refresh:
-        print(f"Chargement {shop}")
-        now_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        chargement_donnees_boutique(shop)
-    else:
-        now_string = "Pas de mise à jour"
-
-    data = shop_charger(shop)
-    nb_ventes = len(data) 
-    generer_rapport(shop, nb_ventes, f"docs/ventes-boutique.html", now_string)
-
-    if not refresh:
-        print("Données non rafraichies !!!")
-
-def shop_charger(event: str):
-    print(f"Charger {event}")
-    with open(f"data/{event}.json"   , "r") as read_content: 
-        json_participants = json.load(read_content)
-
-    billets = [HelloAssoToModel.new_item_vendu(json) for json in json_participants]      
-    return billets
-    #return Evenement(event, jours, billets)
+class Boutique(SyntheseHelloAsso):
     
-# Idem stage.py. Mutaliser ?
-def generate_html(body, style=""):
-    return f"""<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-        {style}
-        </style>
-    </head>
-    <body>
-        {body}
-    </body>
-</html>
-"""
+    def __init__(self, nom) -> None:
+        super().__init__(nom)
+        self.output_file = "docs/ventes-boutique.html"
 
-def generer_rapport(shop, nb_ventes, output_file, now_string):
-    print(f"{shop}: {nb_ventes}")
-    html = generate_html(f"""
-            <h3>{shop}</h3>
-            <div>Ventes: {nb_ventes}</div>
-            </br>
-            <div>dernière mises à jour<br>{now_string}</div>""")
+    def chargement_donnees(self):    
+        from hello_asso import orga
+        
+        json_boutique = orga.get_shop_participants(self.nom)
+        #print(json_boutique)
+        
+        with open(f"data/{self.nom}.json", "w") as outfile:
+            outfile.write(json.dumps(json_boutique, indent=4))
+
+    def synthese(self, now_string):
+        data = self.charger()
+        nb_ventes = len(data) 
+        
+        html = DocumentBoutique().generer_rapport(self.nom, nb_ventes, now_string)
+        DocumentHtml.save(self.output_file, html)
+
+    def charger(self):
+        event=self.nom
+        print(f"Charger {event}")
+        with open(f"data/{event}.json"   , "r") as read_content: 
+            json_participants = json.load(read_content)
+
+        billets = [HelloAssoToModel.new_item_vendu(json) for json in json_participants]      
+        return billets
     
-    with open(output_file, "w") as html_file:
-        html_file.write(html)
-

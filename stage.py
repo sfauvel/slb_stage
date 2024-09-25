@@ -1,25 +1,13 @@
 # Need to do before : pip install helloasso_api
 
-import argparse
-from datetime import datetime
 import json
 
 import sys
 sys.path.insert(0, '../helloasso')
 from model import HelloAssoToModel
 
-class JsonTools:
-    def append_to_dict(dict, key, value):
-        if not key in dict:
-            dict[key] = []
-        dict[key].append(value)
-        
-    def group_by(list, value_builder=lambda data: data, key_builder=lambda key: key):
-        dict = {}
-        for data in list:
-            value = value_builder(data)
-            JsonTools.append_to_dict(dict, key_builder(value), value)
-        return dict
+from commun import DocumentHtml, JsonTools, SyntheseHelloAsso
+
 class Evenement(object): 
     
     def __init__(self, nom, jours, billets):
@@ -44,7 +32,7 @@ class Evenement(object):
         return Evenement(event, jours, billets)
 
     def effectif_le(self, jour):    
-        return self.effectif_par_jour()[jour] if jour in self.effectif_par_jour() else 0
+        return self.effectif_par_jour().get(jour.lower(), 0)
     
     def effectif_par_jour(self):
         par_type_billet = JsonTools.group_by(self.billets, lambda _: _.nom)
@@ -62,24 +50,7 @@ class Evenement(object):
         return nb + tous_les_jours
         
 
-class DocumentHtml(object): 
-    def generer_html(self, body, style=""):
-        return f"""<html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-            {style}
-            </style>
-        </head>
-        <body>
-            {body}
-        </body>
-    </html>
-    """
-    
-    def save(output_file, content):
-        with open(output_file, "w") as filename:
-            filename.write(content)
+
 class DocumentStage(DocumentHtml): 
     def __init__(self) -> None:
         super().__init__()
@@ -108,39 +79,58 @@ class DocumentStage(DocumentHtml):
 
         return html
 
-class Stage(object): 
-    def __init__(self, nom_stage) -> None:
-        self.nom_stage = nom_stage
+class UnStage(SyntheseHelloAsso):
+    def __init__(self, nom, days) -> None:
+        super().__init__(nom)
+        self.days = days
         
-    def _effectif_par_jour(stages):
-        events = [ Evenement.charger(event, days) for (event, days) in stages]
-
-        all_days = [day.lower() for (_, days) in stages for day in days]
+    def chargement_donnees(self):    
+        print(f"Chargement {self.nom}")
+        self.chargement_donnees()
         
-        effectif_par_jour = []
-        liste_stages = ", ".join([stage[0] for stage in stages])
-        print(f"Stages ({liste_stages})")
-            
-     
-        effectif_par_jour = {day: sum([event.effectif_le(day) for event in events]) for day in all_days}
-        print("\n".join([f"- {day}: {nb}" for (day, nb) in effectif_par_jour.items()]))
-            
-        return effectif_par_jour
-    
-    def synthese(nom, stages, output_file, now_string):
-        effectif_par_jour = Stage._effectif_par_jour(stages)        
-        html = DocumentStage().generer_rapport(nom, effectif_par_jour, now_string)
-        DocumentHtml.save(output_file, html)
-  
     def chargement_donnees(self):
     
         from hello_asso import orga
 
-        json_participants = orga.get_event_participants(self.nom_stage)
+        json_participants = orga.get_event_participants(self.nom)
         #print(json_participants)
 
-        with open(f"data/{self.nom_stage}.json", "w") as outfile:
+        with open(f"data/{self.nom}.json", "w") as outfile:
             outfile.write(json.dumps(json_participants, indent=4))
+            
+    def synthese(self, now_string):
+        event = Evenement.charger(self.nom, self.days)
+       
+        effectif_par_jour = {day: event.effectif_le(day) for day in self.days}
+       
+        print(f"Stage {self.nom}: ", effectif_par_jour)
+        return effectif_par_jour
         
-def synthese_stages(nom, stages, output_file, now_string):
-    Stage.synthese(nom, stages, output_file, now_string)
+class Stages(SyntheseHelloAsso):
+    def __init__(self, nom, stages) -> None:
+        super().__init__(nom)
+        self.output_file = "docs/index.html"
+        self.stages_old =  [ (stage.nom, stage.days) for stage in stages]
+        self.stages = stages
+        
+    def chargement_donnees(self):    
+        for stage in self.stages:
+            stage.chargement_donnees()
+            
+    def synthese(self, now_string):
+       
+        effectif_par_jour = self._effectif_par_jour(now_string)        
+        html = DocumentStage().generer_rapport(self.nom, effectif_par_jour, now_string)
+        DocumentHtml.save(self.output_file, html)
+  
+    def _effectif_par_jour(self, now_string):
+        # Definition des jours pour les avoir dans l'ordre
+        jours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']
+
+        syntheses = [stage.synthese(now_string) for stage in self.stages]
+        effectif_par_jour = {jour: sum([synthese.get(jour, 0) for synthese in syntheses]) for jour in jours}   
+                
+        print("Stages: ", (", ".join([stage.nom for stage in self.stages])))
+        print("\n".join([f"- {day}: {nb}" for (day, nb) in effectif_par_jour.items()]))
+            
+        return effectif_par_jour
