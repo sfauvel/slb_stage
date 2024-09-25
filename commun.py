@@ -52,7 +52,7 @@ class SyntheseHelloAsso(object):
         pass
 
 
-    def mise_a_jour(self, refresh = False):
+    def rafraichir_depuis_helloasso(self, refresh):
         # Récupération depuis HelloAsso vers un fichier json
         if refresh:
             print(f"Chargement {self.nom}")
@@ -61,8 +61,12 @@ class SyntheseHelloAsso(object):
         else:
             now_string = "Pas de mise à jour"
 
-        # Chargement des données depuis les fichiers json
+        return now_string
+    
+    def mise_a_jour(self, refresh = False):
+        now_string = self.rafraichir_depuis_helloasso(refresh)
 
+        # Chargement des données depuis les fichiers json
         self.data = self.charger()
 
         document = self.preparer_document()
